@@ -141,9 +141,9 @@ public class DateFormattingExample {
         String formattedDate = formatter.format(dateTime);
         System.out.println(formattedDate);    // <-- May print something like this: 08/18/2022 16:21:38
 
-        dateTime = LocalDateTime.of(1955, 11, 5, 13, 0, 0);
+        dateTime = LocalDateTime.of(1955, 11, 5, 6, 15, 0);
         formattedDate = formatter.format(dateTime);
-        System.out.println(formattedDate);    // <-- Will print 11/05/1955 13:00:00
+        System.out.println(formattedDate);    // <-- Will print 11/05/1955 06:15:00
     }
 }
 ```
