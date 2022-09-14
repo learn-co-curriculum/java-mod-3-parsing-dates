@@ -73,7 +73,7 @@ symbols used in creating a date-time object pattern:
 
 | Symbol | Meaning          | Presentation | Examples            |
 |--------|------------------|--------------|---------------------|
-| y      | year of era      | year         | 2004; 04            |
+| u      | year             | year         | 2004; 04            |
 | M/L    | month of year    | number/text  | 7; 07; Jul; July; J |
 | d      | day of month     | number       | 10                  |
 | E      | day of the week  | text         | Tue; Tuesday; T     |
@@ -101,14 +101,14 @@ import java.time.format.DateTimeFormatter;
 public class DateFormattingExample {
     
     public static void main(String[] args) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/uuuu");
     }
 }
 ```
 
 In the example above, the `toPattern()` method created a `DateTimeFormatter`
 object based on the symbols we defined above. The `formatter` will now format
-dates using the pattern "MM/dd/yyyy". Let's look at another example of where we
+dates using the pattern "MM/dd/uuuu". Let's look at another example of where we
 might define a `DateTimeFormatter` object to also format a time:
 
 ```java
@@ -117,7 +117,7 @@ import java.time.format.DateTimeFormatter;
 public class DateFormattingExample {
     
     public static void main(String[] args) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/uuuu HH:mm:ss");
     }
 }
 ```
@@ -135,7 +135,7 @@ import java.time.LocalDateTime;
 public class DateFormattingExample {
     
     public static void main(String[] args) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/uuuu HH:mm:ss");
         
         LocalDateTime dateTime = LocalDateTime.now();
         String formattedDate = formatter.format(dateTime);
@@ -159,7 +159,7 @@ import java.time.LocalTime;
 public class DateFormattingExample {
     
     public static void main(String[] args) {
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("EEE LLL dd, yy");
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("EEE LLL dd, uu");
         String formattedDate = formatter.format(LocalDate.now());
         System.out.println(formattedDate);    // <-- May print something like this: Thu Aug 18, 22
 
@@ -178,11 +178,11 @@ there is another `parse()` method that will take in the character sequence and
 a `DateTimeFormatter` argument.
 
 Let's revisit the `setBirthday()` method again in the `Person` class. Only this
-time, let's say we expect the birthday to be in the format "MM/dd/yyyy":
+time, let's say we expect the birthday to be in the format "MM/dd/uuuu":
 
 ```java
 public void setBirthday(String birthday) {
-    this.birthday = LocalDate.parse(birthday, DateTimeFormatter.ofPattern("MM/dd/yyyy"));
+    this.birthday = LocalDate.parse(birthday, DateTimeFormatter.ofPattern("MM/dd/uuuu"));
 }
 ```
 
@@ -219,7 +219,7 @@ import java.time.LocalTime;
 public class DateFormattingExample {
     
     public static void main(String[] args) {
-        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("EEE LLL dd, yy HH:mm:ss");
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("EEE LLL dd, uu HH:mm:ss");
         LocalDateTime dateTime = LocalDateTime.parse("Thu Aug 18, 22 16:21:38", dateTimeFormatter);
         System.out.println(dateTime);    // <-- Will print 2022-08-18T16:21:38
 
@@ -230,6 +230,144 @@ public class DateFormattingExample {
 }
 ```
 
+## Validating a Date-Time Object
+
+Say we have a command-line application where we ask a user for a date-time
+object. When this occurs, we want to check two things:
+
+1. The date-time object is the correct format we specify.
+   1. Example: If we ask the user for a date in "MM/dd/yyyy HH:mm" format, we
+      do not want to accept a `String` object like "8-18-2022 16:21".
+   2. This will throw a `DateTimeParseException`.
+2. The date-time object is a valid date-time.
+   1. Example: We don't want to accept a date like this: "09/31/2022 12:00"
+      since September only has 30 days in it.
+
+We can use the `DateTimeFormatter` class to validate the `String` is in the
+correct format. But first, we will introduce the enum `ResolverStyle`.
+
+The `ResolverStyle` enum has three enum constants: `LENIENT`, `SMART`, and
+`STRICT`. When we parse a `String`, it occurs in two phases:
+
+1. "Basic text parse according to the fields."
+2. "Resolves the parsed field-value pairs into date and/or time objects."
+
+The `ResolverStyle` is how we control the second phase. Let's look at what each
+of these styles do in detail:
+
+```java
+import java.time.LocalDateTime;
+import java.time.format.ResolverStyle;
+import java.time.format.DateTimeFormatter;
+
+public class ValidatingDateTimeExample {
+
+    public static void main(String[] args) {
+        
+        // Define a formatter with a LENIENT style
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/uuuu HH:mm:ss").withResolverStyle(ResolverStyle.LENIENT);
+
+        // LENIENT resolves dates and times leniently
+        // If we try to parse a date that does not exist, then it will adjust the date-time object
+        // For example: if we put in a date of "09/31/2022", it will evaluate to the next month
+        LocalDateTime dateTime = LocalDateTime.parse("09/31/2022 12:00:00", formatter);
+        System.out.println(dateTime);    // <-- This will output 2022-10-01T12:00
+
+        // Define a formatter with a SMART style; this is the default resolver style of a DateTimeFormatter
+        // SMART resolves date and times in a smart, or intelligent, manner
+        // This style can sometimes act the same as LENIENT or STRICT
+        formatter = formatter.withResolverStyle(ResolverStyle.SMART);
+        dateTime = LocalDateTime.parse("09/31/2022 12:00:00", formatter);
+        System.out.println(dateTime);    // <-- This will output 2022-09-30T12:00 
+
+        // Define a formatter with STRICT style
+        // STRICT resolves date and times strictly and will ensure that all parsed values are valid
+        formatter = formatter.withResolverStyle(ResolverStyle.STRICT);
+        dateTime = LocalDateTime.parse("09/31/2022 12:00:00", formatter);
+        System.out.println(dateTime);    // <-- Throw a DateTimeParseException; Invalid date 'SEPTEMBER 31'
+
+    }
+}
+```
+
+Understanding how we parse a date-time object from a `String` provides us with
+insight in how we can set up a validator. If we want to possibly correct a
+user's mistake of an invalid date, then we could use the `SMART` resolver style.
+But most of the time we'll want to use the `STRICT` resolver style.
+
+Let's add a method to our example code to add a validator using the
+`withResolverStyle()` method we saw above that sets the resolver style. We can
+also use the `parse()` method from the `DateTimeFormatter` class to see if the
+date-time object will parse correctly.
+
+```java
+import java.time.LocalDateTime;
+import java.time.format.ResolverStyle;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+
+public class ValidatingDateTimeExample {
+
+    public static void main(String[] args) {
+        
+        // Define a formatter with a STRICT resolver style
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/uuuu HH:mm:ss").withResolverStyle(ResolverStyle.STRICT);
+        
+        // Test two String objects to see if they are a valid date-time or not
+        String validDateTime = "09/30/2022 12:00:00";
+        String invalidDateTime = "09/31/2022 12:00:00";
+
+        // Make sure that the valid date-time String is indeed valid
+        if (isValid(validDateTime, formatter)) {
+            System.out.println(validDateTime + " is valid! Storing in a LocalDateTime object...");
+            LocalDateTime dateTime = LocalDateTime.parse(validDateTime, formatter);
+            System.out.println("valid date time: " + dateTime);
+
+        } else {
+            System.out.println(validDateTime + " is invalid.");
+        }
+
+        // Make sure the invalid date-time String is indeed invalid
+        if (isValid(invalidDateTime, formatter)) {
+            System.out.println(invalidDateTime + " is valid! Storing in a LocalDateTime object...");
+            LocalDateTime dateTime = LocalDateTime.parse(invalidDateTime, formatter);
+            System.out.println("invalid date time: " + dateTime);
+        } else {
+            System.out.println(invalidDateTime + " is invalid.");
+        }
+
+    }
+
+   /**
+    * Validate a date-time object based on the DateTimeFormatter format
+    * @param dateTime : String - text that is to be parsed and is checked for validity
+    * @param formatter : DateTimeFormatter - specifies how a date-time object should be formatted
+    * @return boolean - returns whether the String dateTime is a valid date-time
+    */
+    private static boolean isValid(String dateTime, DateTimeFormatter formatter) {
+        try {
+            formatter.parse(dateTime);
+        } catch (DateTimeParseException dateTimeParseException) {
+            return false;
+        }
+        return true;
+    }
+}
+```
+
+The `isValid()` method wil check both the conditions we outlined above to see if
+the `String` object is in the correct format and if it is a valid date-time. To
+test it, we can feed it two hardcoded values where we know for sure the one is a
+valid date-time and the other is an invalid date-time. Here is the output from
+the above example:
+
+```plaintext
+09/30/2022 12:00:00 is valid! Storing in a LocalDateTime object...
+valid date time: 2022-09-30T12:00
+09/31/2022 12:00:00 is invalid.
+```
+
 ## Resources
 
 - [Java 11 DateTimeFormatter Class](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/format/DateTimeFormatter.html)
+- [Java 11 ResolverStyle Enum](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/format/ResolverStyle.html)
