@@ -27,19 +27,24 @@ import java.time.LocalDate;
 public class Person {
     private String name;
     private LocalDate birthday;
+    
     public Person() {
         this.name = "";
         this.birthday = LocalDate.now();
     }
+    
     public String getName() {
         return name;
     }
+    
     public void setName(String name) {
         this.name = name;
     }
+    
     public LocalDate getBirthday() {
         return birthday;
     }
+    
     public void setBirthday(String birthday) {
         this.birthday = LocalDate.parse(birthday);
     }
